@@ -1,0 +1,5 @@
+/build/
+/build-asan/
+/auction_data/
+/demo_data/
+*.log
