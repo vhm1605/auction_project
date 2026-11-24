@@ -1,14 +1,14 @@
-# AUCTION TCP - IT4062 (PostgreSQL + C++ + GUI)
+# AUCTION TCP - IT4062 (PostgreSQL + C++)
 
 Dự án đấu giá trực tuyến theo 8 bài giảng Network Programming, dựa trên cách tổ chức `server-cpp/` trong GitHub https://github.com/tndat-dev/mobile-chatting-app.
 
-**Công nghệ:** Server C++17, TCP `select()`/non-blocking I/O, PostgreSQL **qua `libpq`**, OpenSSL PBKDF2 cho mật khẩu; client C++ terminal **và** client GUI desktop Python Tkinter. Không cần Android Studio, Docker, Kubernetes. PostgreSQL phải hoạt động **trước khi** chạy server. Không có fallback sang lưu tài khoản bằng file.
+**Công nghệ:** Server C++17, TCP `select()`/non-blocking I/O, PostgreSQL **qua `libpq`**, OpenSSL PBKDF2 cho mật khẩu; client C++ terminal với menu đánh số. Không cần Android Studio, Docker, Kubernetes. PostgreSQL phải hoạt động **trước khi** chạy server. Không có fallback sang lưu tài khoản bằng file.
 
 ## 1. Cài đặt Ubuntu / WSL Ubuntu
 
 ```bash
 sudo apt update
-sudo apt install -y build-essential cmake libssl-dev libpq-dev postgresql postgresql-client python3 python3-tk
+sudo apt install -y build-essential cmake libssl-dev libpq-dev postgresql postgresql-client python3
 sudo service postgresql start
 ```
 
@@ -45,23 +45,18 @@ export DB_CONN_STR="host=/var/run/postgresql dbname=auction_db user=$(whoami)"
 Mở **terminal khác** tại thư mục dự án:
 
 ```bash
-# GUI có nút bấm (Ubuntu desktop)
-python3 tools/gui_client.py 127.0.0.1 8080
-
-# Hoặc client dòng lệnh (terminal)
 ./build/auction_client 127.0.0.1 8080
 ```
 
-**Windows + WSL2:** Chạy PostgreSQL và server C++ trong WSL Ubuntu. Mở PowerShell tại thư mục dự án trên Windows để chạy GUI bằng `py -3 tools\gui_client.py 127.0.0.1 8080` (nếu Windows đã cài Python/Tkinter). WSL2 thường chuyển tiếp `localhost` về Linux; khi không kết nối được, kiểm tra IP/port forwarding của WSL2.
 
 **Demo không phải chờ 3 phút:**
 
 ```bash
 ./build/auction_server --port 8081 --data-dir ./demo_data --bid-timeout 5 --notice-gap 2
-python3 tools/gui_client.py 127.0.0.1 8081
+./build/auction_client 127.0.0.1 8081
 ```
 
-Lưu ý: Thời gian 180/30 giây là **mặc định**; chỉ rút ngắn trong demo. Có thể mở nhiều GUI với các tài khoản khác nhau.
+Lưu ý: Thời gian 180/30 giây là **mặc định**; chỉ rút ngắn trong demo. Có thể mở nhiều terminal client với các tài khoản khác nhau.
 
 ## 3. Kiểm tra PostgreSQL đang lưu dữ liệu
 
@@ -91,18 +86,18 @@ psql "$DB_CONN_STR" -c 'SELECT action, username, detail, created_at FROM activit
 
 ## 4. Sử dụng giao diện
 
-1. Mở GUI thứ nhất: đăng ký và đăng nhập `alice`, tạo một phòng, đăng hai hoặc ba vật phẩm (tên, mô tả, start price, buy now price).
-2. Alice bấm bắt đầu bán; vật phẩm đầu tiên chuyển từ `QUEUED` sang `ACTIVE`.
-3. Mở GUI thứ hai: đăng ký/đăng nhập `bob`, tham gia phòng Alice; xem giá hiện tại và các sự kiện trực tiếp.
+1. Mở client thứ nhất: đăng ký và đăng nhập `alice`, tạo một phòng, đăng hai hoặc ba vật phẩm (tên, mô tả, start price, buy now price).
+2. Alice chọn Start auction; vật phẩm đầu tiên chuyển từ `QUEUED` sang `ACTIVE`.
+3. Mở client thứ hai: đăng ký/đăng nhập `bob`, tham gia phòng Alice; xem giá hiện tại và các sự kiện trực tiếp.
 4. Bob tố giá cao hơn ít nhất 10.000 VND. Mỗi lệnh hợp lệ reset timer về 180 giây.
 5. Sau 180 giây không ai đặt giá mới, server gửi NOTICE 1; sau 30 giây gửi NOTICE 2; sau 30 giây gửi NOTICE 3 và chốt người thắng; vật phẩm kế tiếp tự giới thiệu.
-6. Nếu người mua bấm **MUA NGAY** trên vật phẩm đang ACTIVE, server chốt ngay ở giá buy now.
+6. Nếu người mua chọn **Buy now** trên vật phẩm đang ACTIVE, server chốt ngay ở giá buy now.
 
 Chỉ người tạo phòng được đăng/rút vật phẩm hoặc bắt đầu phiên. Chỉ có thể rút vật phẩm `QUEUED`. Một người chỉ ở một phòng tại một thời điểm; mỗi tài khoản chỉ đăng nhập được một phiên đồng thời.
 
 ## 5. Giao thức TCP - text oriented
 
-Gửi các dòng `COMMAND|ARG1|ARG2\n`. Server trả `OK|...`, `ERR|...`, `EVENT|...`, hoặc danh sách `ROOM|...`, `ITEM|...`. Client terminal có thể nhập:
+Gửi các dòng `COMMAND|ARG1|ARG2\n`. Server trả `OK|...`, `ERR|...`, `EVENT|...`, hoặc danh sách `ROOM|...`, `ITEM|...`. Client sử dụng menu đánh số. Các lệnh TCP tương ứng:
 
 ```text
 REGISTER|alice|AlicePass123
@@ -141,7 +136,6 @@ export TEST_DB_CONN_STR="host=/var/run/postgresql dbname=auction_test_db user=$(
 python3 tests/run_postgres_tests.py
 ```
 
-Để chạy GUI test dạng headless, cài `sudo apt install -y xvfb`. Nếu không có `xvfb-run`, test GUI được bỏ qua và có thông báo `SKIP GUI`; test socket/DB vẫn chạy.
 
 Tập kiểm thử có các tình huống gói TCP bị chia/gộp, quyền truy cập, giới hạn số, tăng giá 10.000đ, bộ đếm bị reset sau BID, 3 NOTICE, thứ tự hàng đợi, tranh chấp BUY_NOW, khởi động lại server và truy vấn dữ liệu SQL.
 
@@ -153,9 +147,8 @@ auction_project/
 ├── database/schema.sql
 ├── include/{server_state.h,network_utils.h,persistence.h,persistence_pg.h,logger.h}
 ├── src/{server.cpp,network_utils.cpp,persistence.cpp,persistence_pg.cpp,logger.cpp}
-├── tools/{client.cpp,gui_client.py}
-├── tests/{integration_test.py,gui_client_test.py,run_postgres_tests.py}
-├── GUI_PREVIEW.png
+├── tools/client.cpp
+├── tests/{integration_test.py,run_postgres_tests.py}
 ├── DESIGN.md
 └── TEST_RESULTS.md
 ```

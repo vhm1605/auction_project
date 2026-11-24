@@ -1,5 +1,8 @@
 #include "network_utils.h"
 #include <arpa/inet.h>
+#include <algorithm>
+#include <vector>
+#include <csignal>
 #include <cerrno>
 #include <cstring>
 #include <iostream>
@@ -8,8 +11,86 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
+
+struct MenuCommand {
+    const char* name;
+    const char* label;
+    std::vector<const char*> fields;
+};
+static const std::vector<MenuCommand> commands = {
+    {"EXIT", "Exit", {}},
+    {"REGISTER", "Register", {"Username", "Password"}},
+    {"LOGIN", "Login", {"Username", "Password"}},
+    {"LOGOUT", "Logout", {}},
+    {"CHANGE_PASSWORD", "Change password", {"Old password", "New password"}},
+    {"WHOAMI", "Current account", {}},
+    {"CREATE_ROOM", "Create room", {"Room name"}},
+    {"LIST_ROOMS", "List rooms", {}},
+    {"JOIN_ROOM", "Join room", {"Room ID"}},
+    {"LEAVE_ROOM", "Leave room", {}},
+    {"ADD_ITEM", "Add item", {"Item name", "Description", "Starting price", "Buy now price"}},
+    {"LIST_ITEMS", "List items", {}},
+    {"WITHDRAW_ITEM", "Withdraw item", {"Item ID"}},
+    {"START", "Start auction", {}},
+    {"BID", "Place bid", {"Bid amount"}},
+    {"BUY_NOW", "Buy now", {}},
+    {"HELP", "Help", {}}
+};
+
+/**
+ * @brief Print the numbered client menu.
+ */
+static void print_menu() {
+    std::cout << "\n===== AUCTION MENU =====\n";
+    for (size_t i = 1; i < commands.size(); ++i)
+        std::cout << i << ". " << commands[i].label << '\n';
+    std::cout << "0. Exit\nChoice: " << std::flush;
+}
+
+/**
+ * @brief Collect command fields without blocking socket notifications.
+ */
+class MenuInput {
+    size_t choice = 0, field = 0;
+    bool collecting = false;
+    std::string command;
+public:
+    void prompt() const {
+        std::cout << (collecting ? commands[choice].fields[field] : "Choice")
+                  << ": " << std::flush;
+    }
+    bool accept(const std::string& line, std::string& output) {
+        if (!collecting) {
+            int64_t number = 0;
+            if (line != "0" && !network::parse_positive(line, number,
+                    static_cast<int64_t>(commands.size() - 1))) {
+                std::cout << "Invalid choice.\n"; prompt(); return false;
+            }
+            choice = static_cast<size_t>(number);
+            field = 0;
+            command = commands[choice].name;
+            collecting = !commands[choice].fields.empty();
+            if (collecting) { prompt(); return false; }
+        } else {
+            if (line == "/cancel") {
+                collecting = false; command.clear(); print_menu(); return false;
+            }
+            if (line.empty() || line.find('|') != std::string::npos ||
+                line.find('\r') != std::string::npos || line.find('\0') != std::string::npos ||
+                command.size() + line.size() + 1 > network::MAX_LINE) {
+                std::cout << "Invalid input. Retry or enter /cancel.\n"; prompt(); return false;
+            }
+            command += '|'; command += line;
+            if (++field < commands[choice].fields.size()) { prompt(); return false; }
+            collecting = false;
+        }
+        output = command; command.clear(); return true;
+    }
+};
+
 // Text-based TCP client. Can receive server notifications while keyboard is idle.
 int main(int argc, char* argv[]) {
+  std::signal(SIGPIPE, SIG_IGN);
   const char* host = argc > 1 ? argv[1] : "127.0.0.1";
   int64_t port_num = 8080;
   if (argc > 2 && !network::parse_positive(argv[2], port_num, 65535)) {
@@ -24,13 +105,14 @@ int main(int argc, char* argv[]) {
       connect(fd, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)) < 0) {
     perror("connect"); close(fd); return 1;
   }
+  if (fd >= FD_SETSIZE) { close(fd); return 1; }
   // Avoid indefinite write block for a slow or nonresponsive server.
   timeval send_timeout{3, 0};
   setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &send_timeout, sizeof(send_timeout));
-  std::cout << "Connected to " << host << ':' << port_num << "\n"
-            << "Type HELP, then commands like REGISTER|alice|Password123\n"
-            << "CREATE_ROOM|Room A, ADD_ITEM|Laptop|Used|100000|200000, START, BID|110000\n"
-            << "Messages from server appear automatically.\n" << std::flush;
+  std::cout << "Connected to " << host << ':' << port_num << "\n";
+  std::cout << "Enter /cancel to cancel current input.\n";
+  MenuInput menu;
+  print_menu();
   std::string keyboard, incoming;
   bool input_open = true;
   while (true) {
@@ -46,7 +128,7 @@ int main(int argc, char* argv[]) {
       ssize_t n = recv(fd, bytes, sizeof(bytes), 0);
       if (n <= 0) { std::cout << "Server closed connection\n"; break; }
       for (ssize_t i = 0; i < n; ++i) {
-        if (bytes[i] == '\n') { std::cout << "[SERVER] " << incoming << '\n' << std::flush; incoming.clear(); }
+        if (bytes[i] == '\n') { std::cout << "\n[SERVER] " << incoming << '\n' << std::flush; incoming.clear(); if (input_open) menu.prompt(); }
         else if (incoming.size() < network::MAX_LINE) incoming.push_back(bytes[i]);
         else { std::cerr << "Oversized response\n"; close(fd); return 1; }
       }
@@ -61,11 +143,14 @@ int main(int argc, char* argv[]) {
         for (ssize_t i = 0; i < n; ++i) {
           if (bytes[i] == '\n') {
             if (!keyboard.empty() && keyboard.back() == '\r') keyboard.pop_back();
-            if (!keyboard.empty()) {
-              if (!network::send_all(fd, keyboard.data(), keyboard.size()) ||
+            std::string command;
+            if (menu.accept(keyboard, command)) {
+              if (!network::send_all(fd, command.data(), command.size()) ||
                   !network::send_all(fd, "\n", 1)) {
                 std::cerr << "Send failed\n"; close(fd); return 1;
               }
+              if (command == "EXIT") { close(fd); return 0; }
+              print_menu();
             }
             keyboard.clear();
           } else if (keyboard.size() < network::MAX_LINE) keyboard.push_back(bytes[i]);

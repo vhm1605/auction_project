@@ -148,18 +148,14 @@ Lưu ý: không có TLS, brute-force protection, chống replay, thanh toán ho�
 
 `tests/integration_test.py` kiểm thử qua **socket TCP thực tế**, không chỉ gọi hàm trực tiếp. Gồm coalesced/fragmented messages, quyền truy cập, login duplicate, đổi mật khẩu, tăng giá 10k, integer quá lớn, buy now, ba mốc NOTICE, thứ tự FIFO, persist account/phòng/vật phẩm/giá, kiểm tra bảng PostgreSQL và không lưu plaintext password.
 
-## 8. Bổ sung GUI desktop
+## 8. Terminal client
 
-`tools/gui_client.py` là **chương trình giao diện desktop phụ trợ** dùng Python 3 Tkinter (standard library) vì 8 bài giảng tập trung vào socket/TCP, không có thư viện đồ họa desktop. Bản **server C++17 và client C++17 gốc vẫn nguyên vẹn**, theo repo tham khảo và slide. Giao diện không tạo protocol mới, sử dụng cùng TCP text framing, không tự quyết định quyền.
-
-GUI chia thành 3 tab: tài khoản; phòng đấu giá; phiên đấu giá. Các dòng `ROOM|` và `ITEM|` được đưa vào bảng; `EVENT|` cập nhật giá và log trực tiếp; các nút phát chính xác lệnh `REGISTER`, `LOGIN`, `CREATE_ROOM`, `JOIN_ROOM`, `ADD_ITEM`, `START`, `BID`, `BUY_NOW`... như terminal client.
-
-`LineTransport` chịu trách nhiệm nối TCP, giới hạn dữ liệu, gom/ghép các dòng và I/O phi chặn với `select.select()`. Không tạo thread trong GUI. Kiểm thử `tests/gui_client_test.py` kết nối server thật, tạo account/phòng/vật phẩm, tố giá từ client khác và kiểm tra GUI nhận kết quả tự động.
+Client C++ sử dụng menu đánh số và nhập từng tham số. Client tự tạo lệnh TCP và dùng select() để nhận thông báo bất đồng bộ.
 
 ## 9. Lớp lưu trữ PostgreSQL (bổ sung)
 
 ```text
-[GUI Tkinter/C++ client] -- TCP text --> [C++17 server: select()]
+[C++ terminal client] -- TCP text --> [C++17 server: select()]
                                               |
                                         PostgreSQL libpq
                                               |
@@ -178,4 +174,4 @@ GUI chia thành 3 tab: tài khoản; phòng đấu giá; phiên đấu giá. Cá
 
 ### Kiểm thử mới
 
-`tests/run_postgres_tests.py` tạo schema kiểm thử tạm, chạy `integration_test.py` qua TCP thật và `gui_client_test.py` khi có xvfb; truy vấn trực tiếp các bảng và dọn schema. Khi chỉ có libpq headers mà chưa có server PostgreSQL, mới kiểm tra được **biên dịch**, chưa thể xác nhận tích hợp DB runtime.
+`tests/run_postgres_tests.py` tạo schema kiểm thử tạm, chạy `integration_test.py` qua TCP thật; truy vấn trực tiếp các bảng và dọn schema. Khi chỉ có libpq headers mà chưa có server PostgreSQL, mới kiểm tra được **biên dịch**, chưa thể xác nhận tích hợp DB runtime.

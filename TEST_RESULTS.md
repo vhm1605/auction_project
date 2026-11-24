@@ -4,7 +4,7 @@
 
 - `cmake -S . -B build`: **PASS**; CMake tìm thấy `libpq` PostgreSQL 17.11 và OpenSSL.
 - `cmake --build build -j4`: **PASS**; biên dịch được `auction_server`, `auction_client` với C++17 và cờ cảnh báo `-Wall -Wextra -Wpedantic -Wconversion -Wshadow`.
-- `python3 -m py_compile tools/gui_client.py tests/integration_test.py tests/run_postgres_tests.py`: **PASS**; cú pháp Python hợp lệ.
+- `python3 -m py_compile tests/integration_test.py tests/run_postgres_tests.py`: **PASS**; cú pháp Python hợp lệ.
 - Kiểm tra schema và đường gọi PostgreSQL: `database/schema.sql`, `src/persistence_pg.cpp`, các lệnh query parameterized và SQL transaction đã được thêm vào code.
 
 ## 2. Chưa thể xác nhận trong môi trường này
@@ -29,6 +29,7 @@ Bộ kiểm thử tự động gồm:
 7. TCP fragmentation/coalescing và dòng quá dài.
 8. Dừng server và khởi động lại: users/rooms/items và kết quả bán vẫn tồn tại.
 9. Dùng `psql` kiểm tra dữ liệu `users`, `rooms`, `items`, `bids`, `activity_logs`.
-10. Giao diện Tkinter thực hiện qua socket thật (chỉ khi có `xvfb-run`).
 
 **Cần kiểm thử thêm trước khi triển khai thực tế:** mất kết nối PostgreSQL giữa transaction, load lớn, khôi phục khi thay đổi giờ hệ thống, đa tiến trình server, bảo mật đường truyền TCP. Đây là đồ án học tập, không phải dịch vụ thanh toán công khai.
+
+Lưu ý: Kết quả trên thuộc phiên bản trước; cần kiểm thử lại menu client mới.
