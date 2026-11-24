@@ -38,3 +38,8 @@ Lưu ý: Kết quả trên thuộc phiên bản trước; cần kiểm thử l�
 ## Protocol update
 
 The integration tests now check numeric status codes, CRLF, invalid commands and fragmented/coalesced lines. Prior test results refer to the old protocol; rerun build and PostgreSQL integration tests for this version.
+
+
+## Space-delimited protocol update
+
+Rebuild and rerun integration tests. Historical results do not validate this revision.

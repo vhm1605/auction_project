@@ -4,14 +4,13 @@ Text-oriented TCP protocol, following the HW06 convention of command keywords,
 three-digit response codes and CRLF line termination. This protocol replaces the
 old OK/ERR/EVENT wire format; rebuild both client and server together.
 
-- Request: `COMMAND[|ARG1|ARG2...]\r\n` (uppercase keyword identifies the request).
-- Response/event: `NNN MESSAGE[|FIELD1|FIELD2...]\r\n` (three ASCII digits, one space, symbolic name, optional pipe-separated fields).
-- `\r\n` denotes actual CR (0x0D) then LF (0x0A), not four literal characters.
-- UTF-8 text; spaces in names/descriptions are preserved. Pipe and control characters are not permitted inside user fields. Maximum body size is 2048 bytes, excluding CRLF. Output queue limit is 64 KiB per client, including CRLF.
-- A request is processed only after CRLF. Bare LF returns 303; malformed/oversized input returns 302 and closes the connection. Wrong keyword or argument count returns 300. TCP fragmentation/coalescing does not change message boundaries.
-- Server events (4xx) can arrive independently of a request or interleave with its response. List headers 143/152 carry counts followed by that many 144/153 rows. No request ID is used; send commands in order.
-- The client menu builds request lines automatically. The server remains authoritative for validation, authorization and auction state.
-- Demo TCP is not encrypted; do not transmit real passwords over untrusted networks.
+- Request: `COMMAND [ARG1 ARG2 ...]\r\n` (uppercase keyword).
+- Response/event: `NNN [FIELD1 FIELD2 ...]\r\n` (three ASCII digits; no symbolic name on the wire).
+- A single ASCII space separates fields. Fields containing spaces, quotes or backslashes are enclosed in double quotes; inside quotes, `\"` and `\\` encode a quote and backslash. Empty fields use `""`. No pipe delimiters on the wire; existing input restrictions remain.
+- UTF-8; maximum body length 2048 bytes excluding CRLF; output queue 64 KiB including CRLF.
+- Strict CRLF framing: bare LF returns 303; oversized/malformed framing returns 302 and closes; invalid syntax/argument count returns 300.
+- Events (4xx) are asynchronous. List headers 143/152 carry counts followed by 144/153 rows. No request ID; send commands in order.
+- Client displays symbolic names locally for readability. The server remains authoritative for validation and auction state. Demo TCP is not encrypted.
 
 ## Requests
 
@@ -113,26 +112,17 @@ old OK/ERR/EVENT wire format; rebuild both client and server together.
 ## Examples (wire format)
 
 ```text
-S -> C: 100 CONNECTED|Send HELP for commands\r\n
-C -> S: LOGIN|alice|AlicePass123\r\n
-S -> C: 110 LOGGED_IN|alice\r\n
-C -> S: CREATE_ROOM|Do dien tu\r\n
-S -> C: 140 ROOM_CREATED|1|Do dien tu\r\n
-C -> S: ADD_ITEM|Laptop|Da su dung|100000|200000\r\n
-S -> C: 150 ITEM_QUEUED|1\r\n
-S -> C: 403 ITEM_QUEUED|1|1|Laptop\r\n
-```
+S -> C: 100 "Send HELP for commands"\r\n
+C -> S: LOGIN alice AlicePass123\r\n
+S -> C: 110 alice\r\n
+C -> S: CREATE_ROOM "Do dien tu"\r\n
+S -> C: 140 1 "Do dien tu"\r\n
+C -> S: ADD_ITEM Laptop "Da su dung" 100000 200000\r\n
+S -> C: 150 1\r\n
+S -> ALL: 403 1 1 Laptop\r\n
+C -> S: BID 110000\r\n
+S -> C: 161 1 110000\r\n
+S -> ALL: 410 1 1 bob 110000\r\n
+S -> ALL: 411 1 1 1/3 bob 110000\r\n```
 
-Example for a buyer in room 1 with item 1 active:
-
-```text
-C -> S: BID|110000\r\n
-S -> C: 161 BID_ACCEPTED|1|110000\r\n
-S -> C: 410 NEW_BID|1|1|bob|110000\r\n
-S -> C: 411 NOTICE|1|1|1/3\r\n
-```
-
-The numeric status codes are defined in `include/protocol.h`. Existing message
-names and payload fields are retained, except the generic OK/ERR/EVENT prefix
-is replaced by the specific numeric code. Invalid username/password is deliberately
-reported together as 210, avoiding disclosure of account existence.
+Numeric code definitions and local display names remain in `include/protocol.h`.

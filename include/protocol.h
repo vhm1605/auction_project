@@ -1,11 +1,12 @@
 #pragma once
 #include <cstddef>
 #include <string>
+#include <vector>
+#include <utility>
 
 namespace protocol {
 // Application-layer status codes; request identifiers are uppercase keywords.
-// All wire lines terminate with CRLF. A space separates code from message;
-// a pipe separates fields, preserving spaces in names and descriptions.
+// All wire lines terminate with CRLF. Space separates fields; quote text as needed.
 inline constexpr char CRLF[] = "\r\n";
 enum class Code : int {
   CONNECTED = 100,
@@ -173,10 +174,63 @@ inline const char* message_name(Code code) {
   return "UNKNOWN_STATUS";
 }
 
-/** @brief Format one response/event body, excluding the CRLF terminator. */
+/** @brief Encode a single wire field. Spaces, quotes and backslashes are escaped. */
+inline std::string encode_field(const std::string& field) {
+  if (!field.empty() && field.find_first_of(" \"\\") == std::string::npos) return field;
+  std::string out = "\"";
+  for (char ch : field) {
+    if (ch == '"' || ch == '\\') out += '\\';
+    out += ch;
+  }
+  return out + '"';
+}
+
+/** @brief Parse space-separated tokens with optional quoted fields. */
+inline bool parse(const std::string& line, std::vector<std::string>& fields) {
+  fields.clear();
+  std::size_t i = 0;
+  while (i < line.size()) {
+    if (line[i] == ' ') return false;
+    std::string field;
+    if (line[i] == '"') {
+      ++i;
+      bool closed = false;
+      while (i < line.size()) {
+        char ch = line[i++];
+        if (ch == '"') { closed = true; break; }
+        if (ch == '\\') {
+          if (i == line.size() || (line[i] != '\\' && line[i] != '"')) return false;
+          ch = line[i++];
+        }
+        field += ch;
+      }
+      if (!closed) return false;
+    } else {
+      while (i < line.size() && line[i] != ' ') {
+        if (line[i] == '"' || line[i] == '\\') return false;
+        field += line[i++];
+      }
+    }
+    if (field.find('|') != std::string::npos) return false;
+    fields.push_back(std::move(field));
+    if (i == line.size()) break;
+    if (line[i++] != ' ' || i == line.size()) return false;
+  }
+  return !fields.empty();
+}
+
+/** @brief Format numeric response; existing internal payload fields are pipe-separated. */
 inline std::string format(Code code, const std::string& fields = {}) {
-  std::string line = std::to_string(static_cast<int>(code)) + " " + message_name(code);
-  if (!fields.empty()) line += "|" + fields;
+  std::string line = std::to_string(static_cast<int>(code));
+  if (fields.empty()) return line;
+  std::size_t start = 0;
+  for (;;) {
+    const auto end = fields.find('|', start);
+    line += ' ';
+    line += encode_field(fields.substr(start, end == std::string::npos ? end : end - start));
+    if (end == std::string::npos) break;
+    start = end + 1;
+  }
   return line;
 }
 } // namespace protocol

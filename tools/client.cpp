@@ -78,10 +78,10 @@ public:
             }
             if (line.empty() || line.find('|') != std::string::npos ||
                 line.find('\r') != std::string::npos || line.find('\0') != std::string::npos ||
-                command.size() + line.size() + 1 > network::MAX_LINE) {
+                command.size() + protocol::encode_field(line).size() + 1 > network::MAX_LINE) {
                 std::cout << "Invalid input. Retry or enter /cancel.\n"; prompt(); return false;
             }
-            command += '|'; command += line;
+            command += ' '; command += protocol::encode_field(line);
             if (++field < commands[choice].fields.size()) { prompt(); return false; }
             collecting = false;
         }
@@ -134,13 +134,19 @@ int main(int argc, char* argv[]) {
             std::cerr << "Invalid server line ending\n"; close(fd); return 1;
           }
           incoming.pop_back();
-          if (incoming.size() < 5 || incoming[0] < '1' || incoming[0] > '5' ||
-              incoming[1] < '0' || incoming[1] > '9' ||
-              incoming[2] < '0' || incoming[2] > '9' || incoming[3] != ' ') {
-            std::cerr << "Invalid server message code\n"; close(fd); return 1;
+          std::vector<std::string> fields;
+          int64_t numeric = 0;
+          if (!protocol::parse(incoming, fields) || fields[0].size() != 3 ||
+              !network::parse_positive(fields[0], numeric, 599) || numeric < 100 ||
+              std::string(protocol::message_name(static_cast<protocol::Code>(numeric))) == "UNKNOWN_STATUS") {
+            std::cerr << "Invalid server message code or fields\n"; close(fd); return 1;
           }
-          std::cout << "\n[SERVER] " << incoming << '\n' << std::flush;
-          if (incoming.substr(0, 4) == "131 ") { close(fd); return 0; }
+          std::cout << "\n[SERVER] " << fields[0] << ' '
+                    << protocol::message_name(static_cast<protocol::Code>(numeric));
+          for (std::size_t j = 1; j < fields.size(); ++j)
+            std::cout << ' ' << protocol::encode_field(fields[j]);
+          std::cout << '\n' << std::flush;
+          if (numeric == 131) { close(fd); return 0; }
           incoming.clear();
           if (input_open) menu.prompt();
         } else if ((!incoming.empty() && incoming.back() == '\r') ||

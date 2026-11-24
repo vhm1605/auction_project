@@ -206,8 +206,11 @@ class AuctionServer {
   }
 
   void command(int fd, const std::string& line) {
-    std::vector<std::string> v = network::split(line, '|');
-    if (v.empty()) return;
+    std::vector<std::string> v;
+    if (!protocol::parse(line, v)) {
+      queue(fd, protocol::Code::UNKNOWN_COMMAND_OR_WRONG_ARGUMENTS);
+      return;
+    }
     const std::string& action = v[0];
     if (!protocol::valid_request(action, v.size())) {
       queue(fd, protocol::Code::UNKNOWN_COMMAND_OR_WRONG_ARGUMENTS);

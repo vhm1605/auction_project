@@ -179,4 +179,7 @@ Client C++ sử dụng menu đánh số và nhập từng tham số. Client tự
 
 ## Protocol status codes (current version)
 
-The authoritative wire format is [PROTOCOL.md](PROTOCOL.md): keyword requests, three-digit status responses/events, CRLF framing. `include/protocol.h` defines status codes. Any older framing examples above are superseded by this specification.
+The authoritative wire format is [PROTOCOL.md](PROTOCOL.md): space-separated keyword requests, numeric-only status code plus optional space-separated fields, quoted text, CRLF framing. `include/protocol.h` defines status codes. Any older framing examples above are superseded by this specification.
+
+
+Current wire format: see PROTOCOL.md. No pipe separators or symbolic response names are transmitted; old examples are superseded.
