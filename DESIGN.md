@@ -117,7 +117,7 @@ Lưu ý: không có TLS, brute-force protection, chống replay, thanh toán ho�
 |---|---:|---|
 | Xử lý truyền dòng | 1 | `server.cpp` -> `receive_from()`, `client.cpp` -> stdin/socket buffering |
 | Cơ chế vào/ra socket server | 2 | `server.cpp` -> `run()`, `select()`, `send_to()` |
-| Đăng ký/quản lý tài khoản | 2 | `REGISTER`, `CHANGE_PASSWORD`; `persistence_pg.cpp` + PBKDF2 trong `persistence.cpp` |
+| Đăng ký/quản lý tài khoản | 2 | `REGISTER`; `persistence_pg.cpp` + PBKDF2 trong `persistence.cpp` |
 | Đăng nhập/quản lý phiên | 2 | `LOGIN`, `LOGOUT`, `disconnect_client()` |
 | Kiểm soát quyền phòng | 1 | `joined_room()`, `room->owner` checks |
 | Tạo phòng đấu giá | 1 | `CREATE_ROOM` |
@@ -146,7 +146,7 @@ Lưu ý: không có TLS, brute-force protection, chống replay, thanh toán ho�
 
 ## 7. Kiểm thử đã thiết kế
 
-`tests/integration_test.py` kiểm thử qua **socket TCP thực tế**, không chỉ gọi hàm trực tiếp. Gồm coalesced/fragmented messages, quyền truy cập, login duplicate, đổi mật khẩu, tăng giá 10k, integer quá lớn, buy now, ba mốc NOTICE, thứ tự FIFO, persist account/phòng/vật phẩm/giá, kiểm tra bảng PostgreSQL và không lưu plaintext password.
+`tests/integration_test.py` kiểm thử qua **socket TCP thực tế**, không chỉ gọi hàm trực tiếp. Gồm coalesced/fragmented messages, quyền truy cập, login duplicate, tăng giá 10k, integer quá lớn, buy now, ba mốc NOTICE, thứ tự FIFO, persist account/phòng/vật phẩm/giá, kiểm tra bảng PostgreSQL và không lưu plaintext password.
 
 ## 8. Terminal client
 

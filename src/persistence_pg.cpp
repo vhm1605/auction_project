@@ -171,10 +171,6 @@ bool PostgresPersistence::add_user(const data::User& user) {
   return query("INSERT INTO users(username,salt_hex,password_hash_hex) VALUES($1,$2,$3)",
                {user.username,user.salt_hex,user.password_hash_hex},true);
 }
-bool PostgresPersistence::change_password(const data::User& user) {
-  return query("UPDATE users SET salt_hex=$2,password_hash_hex=$3 WHERE username=$1",
-               {user.username,user.salt_hex,user.password_hash_hex},true);
-}
 bool PostgresPersistence::create_room(const data::Room& room) {
   return query("INSERT INTO rooms(id,name,owner) VALUES($1,$2,$3)",
                {num(room.id),room.name,room.owner},true);

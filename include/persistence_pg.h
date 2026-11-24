@@ -16,7 +16,6 @@ public:
   bool connect_db(const std::string& connection);
   bool load_state(data::State& state);
   bool add_user(const data::User& user);
-  bool change_password(const data::User& user);
   bool create_room(const data::Room& room);
   bool create_item(int room_id, const data::Item& item);
   bool withdraw_item(int room_id, int item_id);

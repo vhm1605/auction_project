@@ -21,8 +21,6 @@ old OK/ERR/EVENT wire format; rebuild both client and server together.
 | REGISTER | username, password |
 | LOGIN | username, password |
 | LOGOUT | none |
-| CHANGE_PASSWORD | old password, new password |
-| WHOAMI | none |
 | CREATE_ROOM | room name |
 | LIST_ROOMS | none |
 | JOIN_ROOM | room ID |
@@ -44,8 +42,6 @@ old OK/ERR/EVENT wire format; rebuild both client and server together.
 | 100 | `CONNECTED` | OK |
 | 110 | `LOGGED_IN` | OK |
 | 111 | `REGISTERED` | OK |
-| 112 | `PASSWORD_CHANGED` | OK |
-| 113 | `SESSION` | OK |
 | 130 | `LOGGED_OUT` | OK |
 | 131 | `BYE` | OK |
 | 140 | `ROOM_CREATED` | OK |
@@ -66,7 +62,6 @@ old OK/ERR/EVENT wire format; rebuild both client and server together.
 | 213 | `ALREADY_LOGGED_IN` | ERR |
 | 214 | `USER_ALREADY_ONLINE` | ERR |
 | 215 | `LOGOUT_FIRST` | ERR |
-| 216 | `INVALID_OLD_PASSWORD` | ERR |
 | 217 | `USER_LIMIT` | ERR |
 | 221 | `LOGIN_REQUIRED` | ERR |
 | 222 | `ONLY_OWNER_CAN_SELL` | ERR |
@@ -91,7 +86,6 @@ old OK/ERR/EVENT wire format; rebuild both client and server together.
 | 301 | `BAD_CREDENTIAL_FORMAT` | ERR |
 | 302 | `INVALID_OR_TOO_LONG_LINE` | ERR |
 | 303 | `INVALID_LINE_ENDING` | ERR |
-| 304 | `INVALID_NEW_PASSWORD` | ERR |
 | 305 | `INVALID_ROOM_NAME` | ERR |
 | 306 | `INVALID_ROOM_ID` | ERR |
 | 307 | `INVALID_ITEM_TEXT` | ERR |
@@ -106,7 +100,6 @@ old OK/ERR/EVENT wire format; rebuild both client and server together.
 | 411 | `NOTICE` | EVENT |
 | 420 | `SOLD` | EVENT |
 | 421 | `QUEUE_EMPTY` | EVENT |
-| 500 | `HASH_FAILED` | ERR |
 | 501 | `STORAGE_FAILED` | ERR |
 
 ## Examples (wire format)

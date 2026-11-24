@@ -221,7 +221,7 @@ class AuctionServer {
     std::string username = c->second.username;
 
     if (action == "HELP" && v.size() == 1) {
-      queue(fd, protocol::Code::COMMANDS, "REGISTER|LOGIN|LOGOUT|CHANGE_PASSWORD|CREATE_ROOM|LIST_ROOMS|JOIN_ROOM|LEAVE_ROOM|ADD_ITEM|LIST_ITEMS|WITHDRAW_ITEM|START|BID|BUY_NOW|WHOAMI|EXIT");
+      queue(fd, protocol::Code::COMMANDS, "REGISTER|LOGIN|LOGOUT|CREATE_ROOM|LIST_ROOMS|JOIN_ROOM|LEAVE_ROOM|ADD_ITEM|LIST_ITEMS|WITHDRAW_ITEM|START|BID|BUY_NOW|EXIT");
       return;
     }
     if (action == "EXIT" && v.size() == 1) {
@@ -269,33 +269,6 @@ class AuctionServer {
       c->second.username.clear();
       queue(fd, protocol::Code::LOGGED_OUT);
       logger::log_activity(directory_, "LOGOUT", username);
-      return;
-    }
-    if (action == "CHANGE_PASSWORD" && v.size() == 3) {
-      data::User& u = state_.users.at(username);
-      if (!network::valid_password(v[1]) ||
-          !persistence::password_matches(v[1], u.salt_hex, u.password_hash_hex)) {
-        queue(fd, protocol::Code::INVALID_OLD_PASSWORD); return;
-      }
-      if (!network::valid_password(v[2])) { queue(fd, protocol::Code::INVALID_NEW_PASSWORD); return; }
-      std::string new_salt, new_hash;
-      if (!persistence::make_password_hash(v[2], new_salt, new_hash)) {
-        queue(fd, protocol::Code::HASH_FAILED); return;
-      }
-      data::User updated = u;
-      updated.salt_hex = std::move(new_salt);
-      updated.password_hash_hex = std::move(new_hash);
-      if (!db_.change_password(updated)) {
-        queue(fd, protocol::Code::STORAGE_FAILED); return;
-      }
-      u.salt_hex = std::move(updated.salt_hex);
-      u.password_hash_hex = std::move(updated.password_hash_hex);
-      queue(fd, protocol::Code::PASSWORD_CHANGED);
-      logger::log_activity(directory_, "CHANGE_PASSWORD", username);
-      return;
-    }
-    if (action == "WHOAMI" && v.size() == 1) {
-      queue(fd, protocol::Code::SESSION, username + "|" + std::to_string(state_.users.at(username).room_id));
       return;
     }
     if (action == "CREATE_ROOM" && v.size() == 2) {

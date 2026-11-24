@@ -20,7 +20,7 @@ python3 tests/run_postgres_tests.py
 
 Bộ kiểm thử tự động gồm:
 
-1. REGISTER/LOGIN/CHANGE_PASSWORD và kiểm tra không đăng nhập hai phiên.
+1. REGISTER/LOGIN và kiểm tra không đăng nhập hai phiên.
 2. Tạo phòng, một người một phòng, phân quyền chủ phòng.
 3. ADD_ITEM / FIFO / WITHDRAW_ITEM.
 4. BID tăng tối thiểu 10.000 VND, số cực lớn, quyền của người bán.
@@ -43,3 +43,5 @@ The integration tests now check numeric status codes, CRLF, invalid commands and
 ## Space-delimited protocol update
 
 Rebuild and rerun integration tests. Historical results do not validate this revision.
+
+Cần build và chạy lại integration test sau khi bỏ WHOAMI và CHANGE_PASSWORD.

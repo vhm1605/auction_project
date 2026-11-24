@@ -23,8 +23,6 @@ static const std::vector<MenuCommand> commands = {
     {"REGISTER", "Register", {"Username", "Password"}},
     {"LOGIN", "Login", {"Username", "Password"}},
     {"LOGOUT", "Logout", {}},
-    {"CHANGE_PASSWORD", "Change password", {"Old password", "New password"}},
-    {"WHOAMI", "Current account", {}},
     {"CREATE_ROOM", "Create room", {"Room name"}},
     {"LIST_ROOMS", "List rooms", {}},
     {"JOIN_ROOM", "Join room", {"Room ID"}},

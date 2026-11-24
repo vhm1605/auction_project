@@ -12,8 +12,6 @@ enum class Code : int {
   CONNECTED = 100,
   LOGGED_IN = 110,
   REGISTERED = 111,
-  PASSWORD_CHANGED = 112,
-  SESSION = 113,
   LOGGED_OUT = 130,
   BYE = 131,
   ROOM_CREATED = 140,
@@ -34,7 +32,6 @@ enum class Code : int {
   ALREADY_LOGGED_IN = 213,
   USER_ALREADY_ONLINE = 214,
   LOGOUT_FIRST = 215,
-  INVALID_OLD_PASSWORD = 216,
   USER_LIMIT = 217,
   LOGIN_REQUIRED = 221,
   ONLY_OWNER_CAN_SELL = 222,
@@ -59,7 +56,6 @@ enum class Code : int {
   BAD_CREDENTIAL_FORMAT = 301,
   INVALID_OR_TOO_LONG_LINE = 302,
   INVALID_LINE_ENDING = 303,
-  INVALID_NEW_PASSWORD = 304,
   INVALID_ROOM_NAME = 305,
   INVALID_ROOM_ID = 306,
   INVALID_ITEM_TEXT = 307,
@@ -74,7 +70,6 @@ enum class Code : int {
   EVENT_NOTICE = 411,
   EVENT_SOLD = 420,
   EVENT_QUEUE_EMPTY = 421,
-  HASH_FAILED = 500,
   STORAGE_FAILED = 501,
 };
 
@@ -85,8 +80,6 @@ inline bool valid_request(const std::string& name, std::size_t count) {
   if (name == "REGISTER") return count == 3;
   if (name == "LOGIN") return count == 3;
   if (name == "LOGOUT") return count == 1;
-  if (name == "CHANGE_PASSWORD") return count == 3;
-  if (name == "WHOAMI") return count == 1;
   if (name == "CREATE_ROOM") return count == 2;
   if (name == "LIST_ROOMS") return count == 1;
   if (name == "JOIN_ROOM") return count == 2;
@@ -106,8 +99,6 @@ inline const char* message_name(Code code) {
     case Code::CONNECTED: return "CONNECTED";
     case Code::LOGGED_IN: return "LOGGED_IN";
     case Code::REGISTERED: return "REGISTERED";
-    case Code::PASSWORD_CHANGED: return "PASSWORD_CHANGED";
-    case Code::SESSION: return "SESSION";
     case Code::LOGGED_OUT: return "LOGGED_OUT";
     case Code::BYE: return "BYE";
     case Code::ROOM_CREATED: return "ROOM_CREATED";
@@ -128,7 +119,6 @@ inline const char* message_name(Code code) {
     case Code::ALREADY_LOGGED_IN: return "ALREADY_LOGGED_IN";
     case Code::USER_ALREADY_ONLINE: return "USER_ALREADY_ONLINE";
     case Code::LOGOUT_FIRST: return "LOGOUT_FIRST";
-    case Code::INVALID_OLD_PASSWORD: return "INVALID_OLD_PASSWORD";
     case Code::USER_LIMIT: return "USER_LIMIT";
     case Code::LOGIN_REQUIRED: return "LOGIN_REQUIRED";
     case Code::ONLY_OWNER_CAN_SELL: return "ONLY_OWNER_CAN_SELL";
@@ -153,7 +143,6 @@ inline const char* message_name(Code code) {
     case Code::BAD_CREDENTIAL_FORMAT: return "BAD_CREDENTIAL_FORMAT";
     case Code::INVALID_OR_TOO_LONG_LINE: return "INVALID_OR_TOO_LONG_LINE";
     case Code::INVALID_LINE_ENDING: return "INVALID_LINE_ENDING";
-    case Code::INVALID_NEW_PASSWORD: return "INVALID_NEW_PASSWORD";
     case Code::INVALID_ROOM_NAME: return "INVALID_ROOM_NAME";
     case Code::INVALID_ROOM_ID: return "INVALID_ROOM_ID";
     case Code::INVALID_ITEM_TEXT: return "INVALID_ITEM_TEXT";
@@ -168,7 +157,6 @@ inline const char* message_name(Code code) {
     case Code::EVENT_NOTICE: return "NOTICE";
     case Code::EVENT_SOLD: return "SOLD";
     case Code::EVENT_QUEUE_EMPTY: return "QUEUE_EMPTY";
-    case Code::HASH_FAILED: return "HASH_FAILED";
     case Code::STORAGE_FAILED: return "STORAGE_FAILED";
   }
   return "UNKNOWN_STATUS";

@@ -173,12 +173,15 @@ def main():
             assert alice.run('LOGIN alice WrongPass',('2', '3', '5')) == '210'
             assert alice.run('LOGIN alice TestPass123') == '110 alice'
             assert bob.run('LIST_ROOMS').startswith('143 3')
-            assert bob.run('CHANGE_PASSWORD BadOldPwd AnotherPass123',('2', '3', '5')) == '216'
-            assert bob.run('CHANGE_PASSWORD TestPass123 AnotherPass123') == '112'
-            # Stream coalescing of multiple commands.
-            bob.send_raw(b'WHOAMI\r\nWHOAMI\r\n')
-            assert bob.expect('113 bob 3') == '113 bob 3'
-            assert bob.expect('113 bob 3') == '113 bob 3'
+            # Removed commands must be rejected even for logged-in clients.
+            assert bob.run('WHOAMI', '300') == '300'
+            assert bob.run('CHANGE_PASSWORD TestPass123 AnotherPass123', '300') == '300'
+            # Stream coalescing of multiple commands; consume each list's rows.
+            bob.send_raw(b'LIST_ROOMS\r\nLIST_ROOMS\r\n')
+            for _ in range(2):
+                assert bob.expect('143 ') == '143 3'
+                for _ in range(3):
+                    assert bob.expect('144 ')
             # oversized line: error and graceful disconnection
             intruder = Peer(port)
             intruder.send_raw(b'X'*2500+b'\r\n')
@@ -186,7 +189,7 @@ def main():
             intruder.close()
             # 1 online account cannot log in again concurrently
             intruder = Peer(port)
-            assert intruder.run('LOGIN bob AnotherPass123',('2', '3', '5')) == '214'
+            assert intruder.run('LOGIN bob TestPass123',('2', '3', '5')) == '214'
             intruder.close()
             print('PASS: register/login, room permissions, FIFO, withdrawal, bids, 3 notices, buy now, TCP framing, bounds')
         finally:
@@ -203,8 +206,8 @@ def main():
         server=start(port,temp)
         try:
             user=Peer(port)
-            assert user.run('LOGIN bob TestPass123',('2', '3', '5')) == '210'
-            assert user.run('LOGIN bob AnotherPass123') == '110 bob'
+            assert user.run('LOGIN bob WrongPass',('2', '3', '5')) == '210'
+            assert user.run('LOGIN bob TestPass123') == '110 bob'
             assert user.run('LIST_ROOMS') == '143 3' # rooms survive restart
             assert user.run('JOIN_ROOM 3') == '141 3 "New room"'
             assert user.run('LIST_ITEMS') == '152 2 ACTIVE=0'
