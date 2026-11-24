@@ -33,3 +33,8 @@ Bộ kiểm thử tự động gồm:
 **Cần kiểm thử thêm trước khi triển khai thực tế:** mất kết nối PostgreSQL giữa transaction, load lớn, khôi phục khi thay đổi giờ hệ thống, đa tiến trình server, bảo mật đường truyền TCP. Đây là đồ án học tập, không phải dịch vụ thanh toán công khai.
 
 Lưu ý: Kết quả trên thuộc phiên bản trước; cần kiểm thử lại menu client mới.
+
+
+## Protocol update
+
+The integration tests now check numeric status codes, CRLF, invalid commands and fragmented/coalesced lines. Prior test results refer to the old protocol; rerun build and PostgreSQL integration tests for this version.

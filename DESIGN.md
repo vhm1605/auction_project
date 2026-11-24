@@ -175,3 +175,8 @@ Client C++ sử dụng menu đánh số và nhập từng tham số. Client tự
 ### Kiểm thử mới
 
 `tests/run_postgres_tests.py` tạo schema kiểm thử tạm, chạy `integration_test.py` qua TCP thật; truy vấn trực tiếp các bảng và dọn schema. Khi chỉ có libpq headers mà chưa có server PostgreSQL, mới kiểm tra được **biên dịch**, chưa thể xác nhận tích hợp DB runtime.
+
+
+## Protocol status codes (current version)
+
+The authoritative wire format is [PROTOCOL.md](PROTOCOL.md): keyword requests, three-digit status responses/events, CRLF framing. `include/protocol.h` defines status codes. Any older framing examples above are superseded by this specification.

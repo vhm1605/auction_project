@@ -1,4 +1,5 @@
 #include "network_utils.h"
+#include "protocol.h"
 #include <arpa/inet.h>
 #include <algorithm>
 #include <vector>
@@ -128,9 +129,26 @@ int main(int argc, char* argv[]) {
       ssize_t n = recv(fd, bytes, sizeof(bytes), 0);
       if (n <= 0) { std::cout << "Server closed connection\n"; break; }
       for (ssize_t i = 0; i < n; ++i) {
-        if (bytes[i] == '\n') { std::cout << "\n[SERVER] " << incoming << '\n' << std::flush; incoming.clear(); if (input_open) menu.prompt(); }
-        else if (incoming.size() < network::MAX_LINE) incoming.push_back(bytes[i]);
-        else { std::cerr << "Oversized response\n"; close(fd); return 1; }
+        if (bytes[i] == '\n') {
+          if (incoming.empty() || incoming.back() != '\r') {
+            std::cerr << "Invalid server line ending\n"; close(fd); return 1;
+          }
+          incoming.pop_back();
+          if (incoming.size() < 5 || incoming[0] < '1' || incoming[0] > '5' ||
+              incoming[1] < '0' || incoming[1] > '9' ||
+              incoming[2] < '0' || incoming[2] > '9' || incoming[3] != ' ') {
+            std::cerr << "Invalid server message code\n"; close(fd); return 1;
+          }
+          std::cout << "\n[SERVER] " << incoming << '\n' << std::flush;
+          if (incoming.substr(0, 4) == "131 ") { close(fd); return 0; }
+          incoming.clear();
+          if (input_open) menu.prompt();
+        } else if ((!incoming.empty() && incoming.back() == '\r') ||
+                   (bytes[i] != '\r' && incoming.size() >= network::MAX_LINE)) {
+          std::cerr << "Invalid or oversized response\n"; close(fd); return 1;
+        } else {
+          incoming.push_back(bytes[i]);
+        }
       }
     }
     if (input_open && FD_ISSET(STDIN_FILENO, &readfds)) {
@@ -146,10 +164,10 @@ int main(int argc, char* argv[]) {
             std::string command;
             if (menu.accept(keyboard, command)) {
               if (!network::send_all(fd, command.data(), command.size()) ||
-                  !network::send_all(fd, "\n", 1)) {
+                  !network::send_all(fd, protocol::CRLF, 2)) {
                 std::cerr << "Send failed\n"; close(fd); return 1;
               }
-              if (command == "EXIT") { close(fd); return 0; }
+              if (command == "EXIT") { input_open = false; break; }
               print_menu();
             }
             keyboard.clear();

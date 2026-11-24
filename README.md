@@ -97,31 +97,11 @@ Chỉ người tạo phòng được đăng/rút vật phẩm hoặc bắt đầ
 
 ## 5. Giao thức TCP - text oriented
 
-Gửi các dòng `COMMAND|ARG1|ARG2\n`. Server trả `OK|...`, `ERR|...`, `EVENT|...`, hoặc danh sách `ROOM|...`, `ITEM|...`. Client sử dụng menu đánh số. Các lệnh TCP tương ứng:
-
-```text
-REGISTER|alice|AlicePass123
-LOGIN|alice|AlicePass123
-CREATE_ROOM|Công nghệ
-ADD_ITEM|Laptop|Máy cũ còn tốt|100000|200000
-START
-LIST_ITEMS
-```
-
-Khách mua:
-
-```text
-REGISTER|bob|BobPass1234
-LOGIN|bob|BobPass1234
-LIST_ROOMS
-JOIN_ROOM|1
-BID|110000
-BUY_NOW
-```
-
-Các lệnh bổ sung: `HELP`, `LOGOUT`, `CHANGE_PASSWORD|old|new`, `WHOAMI`, `JOIN_ROOM|id`, `LEAVE_ROOM`, `LIST_ROOMS`, `LIST_ITEMS`, `WITHDRAW_ITEM|id`, `EXIT`.
-
-**TCP là byte stream**, không coi một `recv()` là một lệnh. Server tích lũy dữ liệu cho tới LF; cắt tối đa 2048 bytes mỗi dòng, kiểm UTF-8, giới hạn 64 KiB output/client và kiểm số nguyên trước khi cộng/nhân. Dùng `int64_t` cho giá VND; không dùng `float`.
+Request: `COMMAND|ARG1|ARG2\r\n`. Response/event: `NNN MESSAGE|FIELD1|FIELD2\r\n`.
+Ví dụ: `LOGIN|alice|AlicePass123` trả về `110 LOGGED_IN|alice` nếu thành công.
+Mỗi message có mã riêng, kết thúc bằng CRLF theo HW06. Xem bảng đầy đủ tại [PROTOCOL.md](PROTOCOL.md).
+Client sử dụng menu đánh số, tự tạo request; server kiểm tra quyền và dữ liệu.
+TCP là byte stream: giới hạn 2048 bytes phần nội dung mỗi dòng, 64 KiB output/client, kiểm tra UTF-8 và số nguyên.
 
 ## 6. Kiểm thử
 
