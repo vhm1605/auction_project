@@ -45,3 +45,6 @@ The integration tests now check numeric status codes, CRLF, invalid commands and
 Rebuild and rerun integration tests. Historical results do not validate this revision.
 
 Cần build và chạy lại integration test sau khi bỏ WHOAMI và CHANGE_PASSWORD.
+
+## Message code regrouping
+1xx notifications/events; 2xx success/data; 4xx client errors; 5xx server errors. Rebuild both binaries and rerun PostgreSQL integration tests; previous results do not validate this revision.

@@ -144,7 +144,7 @@ int main(int argc, char* argv[]) {
           for (std::size_t j = 1; j < fields.size(); ++j)
             std::cout << ' ' << protocol::encode_field(fields[j]);
           std::cout << '\n' << std::flush;
-          if (numeric == 131) { close(fd); return 0; }
+          if (numeric == 231) { close(fd); return 0; }
           incoming.clear();
           if (input_open) menu.prompt();
         } else if ((!incoming.empty() && incoming.back() == '\r') ||

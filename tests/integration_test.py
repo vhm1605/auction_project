@@ -51,7 +51,7 @@ class Peer:
             seen.append(msg)
         raise AssertionError(f'Expected {prefix}, got {seen}')
 
-    def run(self, cmd, expected='1'):
+    def run(self, cmd, expected='2'):
         self.send(cmd)
         return self.expect(expected)
 
@@ -90,106 +90,106 @@ def main():
         try:
             alice,bob,carol,dave=[Peer(port) for _ in range(4)]
             peers=[alice,bob,carol,dave]
-            assert alice.run('UNKNOWN', '300') == '300'
-            assert alice.run('LOGIN alice', '300') == '300'
-            assert alice.run('LOGIN|alice|TestPass123', '300') == '300'
-            assert alice.run('CREATE_ROOM "unterminated', '300') == '300'
+            assert alice.run('UNKNOWN', '450') == '450'
+            assert alice.run('LOGIN alice', '450') == '450'
+            assert alice.run('LOGIN|alice|TestPass123', '450') == '450'
+            assert alice.run('CREATE_ROOM "unterminated', '450') == '450'
             alice.send_raw(b'HELP\n')
-            assert alice.expect('303') == '303'
+            assert alice.expect('453') == '453'
             alice.send_raw(b'HELP\r')
             alice.send_raw(b'\n')
-            assert alice.expect('190 ')
+            assert alice.expect('290 ')
             for peer,name in zip(peers,['alice','bob','carol','dave']):
-                assert peer.run(f'REGISTER {name} TestPass123') == f'111 {name}'
-                assert peer.run(f'LOGIN {name} TestPass123') == f'110 {name}'
-            assert alice.run('CREATE_ROOM "Đấu giá thiết bị"') == '140 1 "Đấu giá thiết bị"'
-            assert alice.run('JOIN_ROOM 1',('2', '3', '5')) == '231'
-            assert bob.run('JOIN_ROOM 1') == '141 1 "Đấu giá thiết bị"'
-            assert carol.run('JOIN_ROOM 1').startswith('141')
-            assert dave.run('CREATE_ROOM "Other room"').startswith('140 2')
-            assert bob.run('JOIN_ROOM 2',('2', '3', '5')) == '231'
-            assert bob.run('ADD_ITEM Bad Test 100000 200000',('2', '3', '5')) == '222'
-            assert bob.run('START',('2', '3', '5')) == '224'
-            assert alice.run('ADD_ITEM Bad Test 9999999999999999999999 100000',('2', '3', '5')).startswith('308')
-            assert alice.run('ADD_ITEM Bad Test 100000 90000',('2', '3', '5')).startswith('308')
-            assert alice.run('ADD_ITEM Laptop "Đã sử dụng" 100000 200000').startswith('150 1')
-            assert alice.run('ADD_ITEM Phone New 50000 90000').startswith('150 2')
-            assert alice.run('WITHDRAW_ITEM 2') == '151 2'
-            assert alice.run('ADD_ITEM Mouse USB 10000 50000').startswith('150 3')
-            assert alice.run('START') == '160'
-            assert alice.run('WITHDRAW_ITEM 1',('2', '3', '5')) == '244'
-            assert bob.run('BID 105000',('2', '3', '5')).startswith('242')
-            assert bob.run('BID 9223372036854775808',('2', '3', '5')).startswith('242')
-            assert alice.run('BID 110000',('2', '3', '5')) == '225'
+                assert peer.run(f'REGISTER {name} TestPass123') == f'211 {name}'
+                assert peer.run(f'LOGIN {name} TestPass123') == f'210 {name}'
+            assert alice.run('CREATE_ROOM "Đấu giá thiết bị"') == '240 1 "Đấu giá thiết bị"'
+            assert alice.run('JOIN_ROOM 1',('4', '5')) == '431'
+            assert bob.run('JOIN_ROOM 1') == '241 1 "Đấu giá thiết bị"'
+            assert carol.run('JOIN_ROOM 1').startswith('241')
+            assert dave.run('CREATE_ROOM "Other room"').startswith('240 2')
+            assert bob.run('JOIN_ROOM 2',('4', '5')) == '431'
+            assert bob.run('ADD_ITEM Bad Test 100000 200000',('4', '5')) == '422'
+            assert bob.run('START',('4', '5')) == '424'
+            assert alice.run('ADD_ITEM Bad Test 9999999999999999999999 100000',('4', '5')).startswith('458')
+            assert alice.run('ADD_ITEM Bad Test 100000 90000',('4', '5')).startswith('458')
+            assert alice.run('ADD_ITEM Laptop "Đã sử dụng" 100000 200000').startswith('250 1')
+            assert alice.run('ADD_ITEM Phone New 50000 90000').startswith('250 2')
+            assert alice.run('WITHDRAW_ITEM 2') == '251 2'
+            assert alice.run('ADD_ITEM Mouse USB 10000 50000').startswith('250 3')
+            assert alice.run('START') == '260'
+            assert alice.run('WITHDRAW_ITEM 1',('4', '5')) == '444'
+            assert bob.run('BID 105000',('4', '5')).startswith('442')
+            assert bob.run('BID 9223372036854775808',('4', '5')).startswith('442')
+            assert alice.run('BID 110000',('4', '5')) == '425'
             bob.send_raw(b'BID 11')
             time.sleep(0.02)
             bob.send_raw(b'0000\r\n')
-            assert bob.expect('161 1 110000') == '161 1 110000'
-            assert carol.run('BID 120000') == '161 1 120000'
+            assert bob.expect('261 1 110000') == '261 1 110000'
+            assert carol.run('BID 120000') == '261 1 120000'
             # Wait through 3 notifications; winner must be most recent highest bidder.
-            assert alice.expect('411 1 1 1/3', timeout=3)
-            assert alice.expect('411 1 1 2/3', timeout=3)
-            assert alice.expect('411 1 1 3/3', timeout=3)
-            assert alice.expect('420 1 1 carol 120000 BID',timeout=2)
-            assert alice.expect('400 1 3',timeout=2)
-            assert bob.run('BUY_NOW') == '162 3 50000'
-            assert alice.expect('420 1 3 bob 50000 BUY_NOW',timeout=2)
-            assert bob.run('BID 15000',('2', '3', '5')) == '241'
-            assert bob.run('LIST_ITEMS').startswith('152 3 ACTIVE=0')
-            assert alice.run('LEAVE_ROOM') == '142'
-            assert alice.run('CREATE_ROOM "New room"') == '140 3 "New room"'
-            assert alice.run('ADD_ITEM ResetTest Monitor 100000 250000') == '150 4'
-            assert alice.run('START') == '160'
-            assert bob.run('LEAVE_ROOM') == '142'
-            assert bob.run('JOIN_ROOM 3') == '141 3 "New room"'
-            assert carol.run('LEAVE_ROOM') == '142'
-            assert carol.run('JOIN_ROOM 3') == '141 3 "New room"'
-            assert bob.run('BID 110000') == '161 4 110000'
-            assert alice.expect('411 3 4 1/3', timeout=3)
-            assert carol.run('BID 120000') == '161 4 120000'
+            assert alice.expect('121 1 1 1/3', timeout=3)
+            assert alice.expect('121 1 1 2/3', timeout=3)
+            assert alice.expect('121 1 1 3/3', timeout=3)
+            assert alice.expect('130 1 1 carol 120000 BID',timeout=2)
+            assert alice.expect('110 1 3',timeout=2)
+            assert bob.run('BUY_NOW') == '262 3 50000'
+            assert alice.expect('130 1 3 bob 50000 BUY_NOW',timeout=2)
+            assert bob.run('BID 15000',('4', '5')) == '441'
+            assert bob.run('LIST_ITEMS').startswith('252 3 ACTIVE=0')
+            assert alice.run('LEAVE_ROOM') == '242'
+            assert alice.run('CREATE_ROOM "New room"') == '240 3 "New room"'
+            assert alice.run('ADD_ITEM ResetTest Monitor 100000 250000') == '250 4'
+            assert alice.run('START') == '260'
+            assert bob.run('LEAVE_ROOM') == '242'
+            assert bob.run('JOIN_ROOM 3') == '241 3 "New room"'
+            assert carol.run('LEAVE_ROOM') == '242'
+            assert carol.run('JOIN_ROOM 3') == '241 3 "New room"'
+            assert bob.run('BID 110000') == '261 4 110000'
+            assert alice.expect('121 3 4 1/3', timeout=3)
+            assert carol.run('BID 120000') == '261 4 120000'
             # The new bid cancels the old pending 2/3 and restarts from 1/3.
-            assert alice.expect('411 3 4 1/3', timeout=3)
-            assert alice.expect('411 3 4 2/3', timeout=3)
-            assert alice.expect('411 3 4 3/3', timeout=3)
-            assert alice.expect('420 3 4 carol 120000 BID', timeout=2)
-            assert alice.run('ADD_ITEM RaceBuy Phone 50000 100000') == '150 5'
-            assert alice.run('START') == '160'
+            assert alice.expect('121 3 4 1/3', timeout=3)
+            assert alice.expect('121 3 4 2/3', timeout=3)
+            assert alice.expect('121 3 4 3/3', timeout=3)
+            assert alice.expect('130 3 4 carol 120000 BID', timeout=2)
+            assert alice.run('ADD_ITEM RaceBuy Phone 50000 100000') == '250 5'
+            assert alice.run('START') == '260'
             outcomes = []
             def buy(peer):
                 peer.send('BUY_NOW')
                 while True:
                     reply = peer.get()
-                    if reply.startswith('162') or reply.startswith('241'):
+                    if reply.startswith('262') or reply.startswith('441'):
                         outcomes.append(reply)
                         return
             x = threading.Thread(target=buy, args=(bob,))
             y = threading.Thread(target=buy, args=(carol,))
             x.start(); y.start(); x.join(timeout=4); y.join(timeout=4)
             assert len(outcomes) == 2, outcomes
-            assert sum(v.startswith('162 5 100000') for v in outcomes) == 1, outcomes
-            assert sum(v.startswith('241') for v in outcomes) == 1, outcomes
-            assert alice.expect('420 3 5 ', timeout=2)
-            assert alice.run('LOGOUT') == '130'
-            assert alice.run('LOGIN alice WrongPass',('2', '3', '5')) == '210'
-            assert alice.run('LOGIN alice TestPass123') == '110 alice'
-            assert bob.run('LIST_ROOMS').startswith('143 3')
+            assert sum(v.startswith('262 5 100000') for v in outcomes) == 1, outcomes
+            assert sum(v.startswith('441') for v in outcomes) == 1, outcomes
+            assert alice.expect('130 3 5 ', timeout=2)
+            assert alice.run('LOGOUT') == '230'
+            assert alice.run('LOGIN alice WrongPass',('4', '5')) == '410'
+            assert alice.run('LOGIN alice TestPass123') == '210 alice'
+            assert bob.run('LIST_ROOMS').startswith('243 3')
             # Removed commands must be rejected even for logged-in clients.
-            assert bob.run('WHOAMI', '300') == '300'
-            assert bob.run('CHANGE_PASSWORD TestPass123 AnotherPass123', '300') == '300'
+            assert bob.run('WHOAMI', '450') == '450'
+            assert bob.run('CHANGE_PASSWORD TestPass123 AnotherPass123', '450') == '450'
             # Stream coalescing of multiple commands; consume each list's rows.
             bob.send_raw(b'LIST_ROOMS\r\nLIST_ROOMS\r\n')
             for _ in range(2):
-                assert bob.expect('143 ') == '143 3'
+                assert bob.expect('243 ') == '243 3'
                 for _ in range(3):
-                    assert bob.expect('144 ')
+                    assert bob.expect('244 ')
             # oversized line: error and graceful disconnection
             intruder = Peer(port)
             intruder.send_raw(b'X'*2500+b'\r\n')
-            assert intruder.expect('302').startswith('302')
+            assert intruder.expect('452').startswith('452')
             intruder.close()
             # 1 online account cannot log in again concurrently
             intruder = Peer(port)
-            assert intruder.run('LOGIN bob TestPass123',('2', '3', '5')) == '214'
+            assert intruder.run('LOGIN bob TestPass123',('4', '5')) == '414'
             intruder.close()
             print('PASS: register/login, room permissions, FIFO, withdrawal, bids, 3 notices, buy now, TCP framing, bounds')
         finally:
@@ -206,12 +206,12 @@ def main():
         server=start(port,temp)
         try:
             user=Peer(port)
-            assert user.run('LOGIN bob WrongPass',('2', '3', '5')) == '210'
-            assert user.run('LOGIN bob TestPass123') == '110 bob'
-            assert user.run('LIST_ROOMS') == '143 3' # rooms survive restart
-            assert user.run('JOIN_ROOM 3') == '141 3 "New room"'
-            assert user.run('LIST_ITEMS') == '152 2 ACTIVE=0'
-            assert user.expect('153 4 SOLD ResetTest Monitor 100000 250000 120000 carol carol')
+            assert user.run('LOGIN bob WrongPass',('4', '5')) == '410'
+            assert user.run('LOGIN bob TestPass123') == '210 bob'
+            assert user.run('LIST_ROOMS') == '243 3' # rooms survive restart
+            assert user.run('JOIN_ROOM 3') == '241 3 "New room"'
+            assert user.run('LIST_ITEMS') == '252 2 ACTIVE=0'
+            assert user.expect('253 4 SOLD ResetTest Monitor 100000 250000 120000 carol carol')
             user.close()
         finally:
             server.terminate(); server.communicate(timeout=2)

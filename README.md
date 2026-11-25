@@ -98,8 +98,8 @@ Chỉ người tạo phòng được đăng/rút vật phẩm hoặc bắt đầ
 ## 5. Giao thức TCP - text oriented
 
 Request: `COMMAND ARG1 ARG2\r\n`. Response/event: `NNN FIELD1 FIELD2\r\n`.
-Ví dụ `LOGIN alice AlicePass123` trả `110 alice`. Trường văn bản chứa khoảng trắng dùng ngoặc kép, ví dụ `CREATE_ROOM "Electronic Devices"`.
-Các mã số và CRLF theo HW06; tên message chỉ hiển thị cục bộ trên client. Xem [PROTOCOL.md](PROTOCOL.md).
+Ví dụ `LOGIN alice AlicePass123` trả `210 alice`. Trường văn bản chứa khoảng trắng dùng ngoặc kép, ví dụ `CREATE_ROOM "Electronic Devices"`.
+Nhóm mã: 1xx thông báo/sự kiện, 2xx thành công, 4xx lỗi client, 5xx lỗi server (3xx chưa dùng). Các mã số và CRLF theo HW06; tên message chỉ hiển thị cục bộ trên client. Xem [PROTOCOL.md](PROTOCOL.md).
 TCP là byte stream: tối đa 2048 bytes nội dung/dòng; output queue 64 KiB/client. Server kiểm tra quyền và dữ liệu.
 
 ## 6. Kiểm thử

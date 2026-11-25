@@ -98,7 +98,7 @@ Cùng một phiên xử lý, nếu hai client cùng gửi BID, server xử lý l
 
 | Nội dung | Cách phòng tránh trong code |
 |---|---|
-| **Text-oriented protocol** | Mỗi câu lệnh kết thúc bằng LF, phân cách `|`; không suy đoán `recv` = một message; UTF-8 validation cho room/item text |
+| **Text-oriented protocol** | Mỗi câu lệnh kết thúc bằng CRLF, phân cách bằng dấu cách; không suy đoán `recv` = một message; UTF-8 validation cho room/item text |
 | **Buffer overflow** | `std::string` với giới hạn rõ 2048 bytes; input > giới hạn bị từ chối; giới hạn 64 KiB hàng đợi gửi; không `strcpy`, không `gets` |
 | **Integer overflow** | Parse chữ số từng ký tự, kiểm tra trước nhân 10 và cộng; dùng `int64_t` cho giá; mọi giá <= 9e15; kiểm tra trước khi +10000 |
 | **Memory access safety** | tra `.find()` trước khi sử dụng map, không tin ID do client cung cấp, giới hạn `fd < FD_SETSIZE`, không giữ iterator bị invalidation khi đóng client |
@@ -107,7 +107,6 @@ Cùng một phiên xử lý, nếu hai client cùng gửi BID, server xử lý l
 | **Resource exhaustion** | maximum users/rooms/items/clients; work quota mỗi lần đọc/accept; disconnect slow receivers |
 | **Confidentiality of stored passwords** | OpenSSL PBKDF2-HMAC-SHA256 120k iterations, random 16-byte salt; OpenSSL constant-time comparison; chỉ hash/salt được lưu vào PostgreSQL |
 | **Activity log** | bảng `activity_logs` trong PostgreSQL và file `activity.log` 0600; không ghi mật khẩu |
-| **Crash safety of password updates** | `UPDATE users` trực tiếp trong PostgreSQL, một transaction SQL nguyên tử; server chỉ thay đổi cache sau khi SQL thành công |
 
 Lưu ý: không có TLS, brute-force protection, chống replay, thanh toán hoặc cơ chế phục hồi phiên đấu. Không thể coi đây là ứng dụng tài chính production.
 
@@ -183,3 +182,5 @@ The authoritative wire format is [PROTOCOL.md](PROTOCOL.md): space-separated key
 
 
 Current wire format: see PROTOCOL.md. No pipe separators or symbolic response names are transmitted; old examples are superseded.
+
+Message classes: 1xx notification/event; 2xx success/data; 4xx client errors; 5xx server errors; 3xx reserved.
