@@ -1,6 +1,6 @@
 # AUCTION TCP - IT4062 (PostgreSQL + C++)
 
-Dự án đấu giá trực tuyến theo 8 bài giảng Network Programming, dựa trên cách tổ chức `server-cpp/` trong GitHub https://github.com/tndat-dev/mobile-chatting-app.
+Ứng dụng đấu giá trực tuyến theo mô hình Client-Server sử dụng TCP.
 
 **Công nghệ:** Server C++17, TCP `select()`/non-blocking I/O, PostgreSQL **qua `libpq`**, OpenSSL PBKDF2 cho mật khẩu; client C++ terminal với menu đánh số. Không cần Android Studio, Docker, Kubernetes. PostgreSQL phải hoạt động **trước khi** chạy server. Không có fallback sang lưu tài khoản bằng file.
 
@@ -78,7 +78,7 @@ psql "$DB_CONN_STR" -c 'SELECT action, username, detail, created_at FROM activit
 | `bids` | Lịch sử các lượt tố giá hợp lệ, người tố, giá và thời gian |
 | `activity_logs` | Log REGISTER / LOGIN / JOIN / BID / NOTICE / SOLD và các sự kiện khác |
 
-`database/schema.sql` tạo schema. `src/persistence_pg.cpp` dùng `PQconnectdb()`, `PQexecParams()`, `PQclear()`, `PQfinish()` tương tự hướng tiếp cận `persistence_pg.cpp` của GitHub. Các thay đổi nhiều bảng (BID + bid history; SOLD + chuyển vật phẩm tiếp) chạy trong `BEGIN`/`COMMIT` hoặc `ROLLBACK`. Để tránh SQL injection, **giá trị từ người dùng chỉ đưa vào parameter `$1`, `$2`..., không nối chuỗi SQL**.
+`database/schema.sql` tạo schema. `src/persistence_pg.cpp` dùng `PQconnectdb()`, `PQexecParams()`, `PQclear()`, `PQfinish()`. Các thay đổi nhiều bảng (BID + bid history; SOLD + chuyển vật phẩm tiếp) chạy trong `BEGIN`/`COMMIT` hoặc `ROLLBACK`. Để tránh SQL injection, **giá trị từ người dùng chỉ đưa vào parameter `$1`, `$2`..., không nối chuỗi SQL**.
 
 **Khi khởi động lại server:** người dùng/phòng/vật phẩm/lịch sử tố giá/kết quả bán vẫn còn trong DB. Phiên đăng nhập và danh sách người đang ở trong phòng không tự phục hồi vì socket TCP cũ đã đóng; người dùng đăng nhập lại và JOIN phòng. Đồng hồ của vật phẩm đang bán có người đặt giá được phục hồi từ hạn thông báo lưu ở DB. Chỉ chạy **một phiên bản server** trên cùng database: trạng thái phiên và lịch đấu được điều phối trong một event loop, chưa thiết kế multi-server.
 
@@ -97,9 +97,9 @@ Chỉ người tạo phòng được đăng/rút vật phẩm hoặc bắt đầ
 
 ## 5. Giao thức TCP - text oriented
 
-Request: `COMMAND ARG1 ARG2\r\n`. Response/event: `NNN FIELD1 FIELD2\r\n`.
-Ví dụ `LOGIN alice AlicePass123` trả `210 alice`. Trường văn bản chứa khoảng trắng dùng ngoặc kép, ví dụ `CREATE_ROOM "Electronic Devices"`.
-Nhóm mã: 1xx thông báo/sự kiện, 2xx thành công, 4xx lỗi client, 5xx lỗi server (3xx chưa dùng). Các mã số và CRLF theo HW06; tên message chỉ hiển thị cục bộ trên client. Xem [PROTOCOL.md](PROTOCOL.md).
+Request: `COMMAND ARG1 ARG2\r\n`. Response/event: `CODE MESSAGE FIELD1 FIELD2\r\n`.
+Ví dụ `LOGIN alice AlicePass123` trả `200 OK LOGIN alice`. Trường văn bản chứa khoảng trắng dùng ngoặc kép, ví dụ `CREATE_ROOM "Electronic Devices"`.
+Nhóm mã: 1xx thông báo/sự kiện, 2xx thành công, 4xx lỗi client, 5xx lỗi server (3xx chưa dùng). Giao thức gồm 19 mã phản hồi, mỗi mã có một tên message cố định. Xem [PROTOCOL.md](PROTOCOL.md).
 TCP là byte stream: tối đa 2048 bytes nội dung/dòng; output queue 64 KiB/client. Server kiểm tra quyền và dữ liệu.
 
 ## 6. Kiểm thử
@@ -137,4 +137,4 @@ auction_project/
 - Mật khẩu lưu bằng salt ngẫu nhiên + PBKDF2-HMAC-SHA256; giao thức TCP demo **không có TLS**, nên chỉ chạy localhost/LAN tin cậy, không công khai ra Internet.
 - SQL dùng câu lệnh tham số hóa. Chức năng mua/bán chỉ **xác định người thắng và giá**, không chuyển tiền thật.
 - Kết nối libpq dùng I/O đồng bộ, có thể làm event loop tạm dừng khi PostgreSQL chậm. Phù hợp demo một server/DB nội bộ, không phải hệ thống production.
-- `activity.log` vẫn được lưu ở `--data-dir` như bản cũ để dễ chấm phần log; bảng `activity_logs` trong PostgreSQL cũng nhận bản ghi. Tài khoản và trạng thái đấu giá **không còn lưu file TSV**.
+- `activity.log` vẫn được lưu ở `--data-dir`; bảng `activity_logs` trong PostgreSQL cũng nhận bản ghi. Tài khoản và trạng thái đấu giá **không còn lưu file TSV**.
