@@ -134,17 +134,18 @@ int main(int argc, char* argv[]) {
           incoming.pop_back();
           std::vector<std::string> fields;
           int64_t numeric = 0;
-          if (!protocol::parse(incoming, fields) || fields[0].size() != 3 ||
+          if (!protocol::parse(incoming, fields) || fields.size() < 2 || fields[0].size() != 3 ||
               !network::parse_positive(fields[0], numeric, 599) || numeric < 100 ||
-              std::string(protocol::message_name(static_cast<protocol::Code>(numeric))) == "UNKNOWN_STATUS") {
+              std::string(protocol::message_name(static_cast<protocol::Code>(numeric))) == "UNKNOWN_STATUS" ||
+              fields[1] != protocol::message_name(static_cast<protocol::Code>(numeric))) {
             std::cerr << "Invalid server message code or fields\n"; close(fd); return 1;
           }
           std::cout << "\n[SERVER] " << fields[0] << ' '
                     << protocol::message_name(static_cast<protocol::Code>(numeric));
-          for (std::size_t j = 1; j < fields.size(); ++j)
+          for (std::size_t j = 2; j < fields.size(); ++j)
             std::cout << ' ' << protocol::encode_field(fields[j]);
           std::cout << '\n' << std::flush;
-          if (numeric == 231) { close(fd); return 0; }
+          if (numeric == 200 && fields.size() == 3 && fields[2] == "EXIT") { close(fd); return 0; }
           incoming.clear();
           if (input_open) menu.prompt();
         } else if ((!incoming.empty() && incoming.back() == '\r') ||

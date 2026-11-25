@@ -1,122 +1,84 @@
-# Application-layer protocol
+# Auction application protocol (compact)
 
-Text-oriented TCP protocol, following the HW06 convention of command keywords,
-three-digit response codes and CRLF line termination. This protocol replaces the
-old OK/ERR/EVENT wire format; rebuild both client and server together.
+TCP, UTF-8, CRLF (`\r\n`). Request: `COMMAND [fields...]`. Response/event: `CODE MESSAGE [fields...]`. One fixed message name per code. Error descriptions are quoted human-readable Vietnamese text, not additional identifiers. Fields containing spaces, quotes or backslashes use the existing quoting and escaping rules. Pipes are not allowed in wire fields. Rebuild server and client together.
 
-- Request: `COMMAND [ARG1 ARG2 ...]\r\n` (uppercase keyword).
-- Response/event: `NNN [FIELD1 FIELD2 ...]\r\n` (three ASCII digits; no symbolic name on the wire).
-- A single ASCII space separates fields. Fields containing spaces, quotes or backslashes are enclosed in double quotes; inside quotes, `\"` and `\\` encode a quote and backslash. Empty fields use `""`. No pipe delimiters on the wire; existing input restrictions remain.
-- UTF-8; maximum body length 2048 bytes excluding CRLF; output queue 64 KiB including CRLF.
-- Strict CRLF framing: bare LF returns 453; oversized/malformed framing returns 452 and closes; invalid syntax/argument count returns 450.
-- Events (1xx) are asynchronous. List headers 243/252 carry counts followed by 244/253 rows. No request ID; send commands in order.
-- Client displays symbolic names locally for readability. The server remains authoritative for validation and auction state. Demo TCP is not encrypted.
+## Requests and successful responses
 
-## Requests
-
-| Keyword | Arguments |
+| Request | Success response |
 |---|---|
-| HELP | none |
-| EXIT | none |
-| REGISTER | username, password |
-| LOGIN | username, password |
-| LOGOUT | none |
-| CREATE_ROOM | room name |
-| LIST_ROOMS | none |
-| JOIN_ROOM | room ID |
-| LEAVE_ROOM | none |
-| ADD_ITEM | name, description, starting price, buy-now price |
-| WITHDRAW_ITEM | item ID |
-| LIST_ITEMS | none |
-| START | none |
-| BID | amount |
-| BUY_NOW | none |
+| `REGISTER username password` | `200 OK REGISTER username` |
+| `LOGIN username password` | `200 OK LOGIN username` |
+| `LOGOUT` | `200 OK LOGOUT` |
+| `CREATE_ROOM room_name` | `200 OK CREATE_ROOM room_id room_name` |
+| `LIST_ROOMS` | `200 OK LIST_ROOMS room_count` |
+| `JOIN_ROOM room_id` | `200 OK JOIN_ROOM room_id room_name` |
+| `LEAVE_ROOM` | `200 OK LEAVE_ROOM` |
+| `ADD_ITEM name description start_price buy_now_price` | `200 OK ADD_ITEM item_id` |
+| `WITHDRAW_ITEM item_id` | `200 OK WITHDRAW_ITEM item_id` |
+| `LIST_ITEMS` | `200 OK LIST_ITEMS item_count ACTIVE=active_item_id` |
+| `START` | `200 OK START` |
+| `BID amount` | `200 OK BID item_id amount` |
+| `BUY_NOW` | `200 OK BUY_NOW item_id amount` |
+| `HELP` | `200 OK HELP command1 command2 ...` |
+| `EXIT` | `200 OK EXIT` |
 
-## Response codes
+LIST_ROOMS and LIST_ITEMS send one data message per row after the count response. HELP lists all 15 requests. EXIT sends OK before closing.
 
-1xx connection notification and asynchronous events; 2xx success/data;
-4xx business/authorization and syntax/data errors; 5xx internal/storage error.
-3xx reserved (unused).
+## Event and data formats
 
-| Code | Message | Type |
+- `100 CONNECTED message`
+- `110 ITEM_STARTED room_id item_id name description start_price buy_now_price`
+- `111 MEMBER_EVENT room_id JOIN/LEAVE username`
+- `113 ITEM_EVENT room_id ADD/WITHDRAW item_id [name]`
+- `120 NEW_BID room_id item_id bidder amount`
+- `121 CLOSING_NOTICE room_id item_id notice_count highest_bidder highest_price`
+- `130 ITEM_SOLD room_id item_id buyer final_price mode`
+- `131 QUEUE_EMPTY room_id`
+- `200 OK COMMAND [fields...]`
+- `201 ROOM_DATA LIST_ROOMS room_id room_name owner member_count`
+- `202 ITEM_DATA LIST_ITEMS item_id status name description start_price buy_now_price highest_price highest_bidder buyer`
+
+JOIN/LEAVE and ADD/WITHDRAW are alternative literal actions; name is present only for ADD. Sale mode is BID or BUY_NOW. Broadcasts are scoped to room members.
+
+## Errors
+
+Format: `CODE MESSAGE "DESCRIPTION"`.
+
+| Code | Message | Description |
 |---|---|---|
-| 100 | `CONNECTED` | INFO |
-| 110 | `ITEM_STARTED` | EVENT |
-| 111 | `MEMBER_JOINED` | EVENT |
-| 112 | `MEMBER_LEFT` | EVENT |
-| 113 | `ITEM_QUEUED` | EVENT |
-| 114 | `ITEM_WITHDRAWN` | EVENT |
-| 120 | `NEW_BID` | EVENT |
-| 121 | `NOTICE` | EVENT |
-| 130 | `SOLD` | EVENT |
-| 131 | `QUEUE_EMPTY` | EVENT |
-| 210 | `LOGGED_IN` | OK |
-| 211 | `REGISTERED` | OK |
-| 230 | `LOGGED_OUT` | OK |
-| 231 | `BYE` | OK |
-| 240 | `ROOM_CREATED` | OK |
-| 241 | `JOINED_ROOM` | OK |
-| 242 | `LEFT_ROOM` | OK |
-| 243 | `ROOMS` | OK |
-| 244 | `ROOM` | LIST DATA |
-| 250 | `ITEM_QUEUED` | OK |
-| 251 | `ITEM_WITHDRAWN` | OK |
-| 252 | `ITEMS` | OK |
-| 253 | `ITEM` | LIST DATA |
-| 260 | `AUCTION_STARTED` | OK |
-| 261 | `BID_ACCEPTED` | OK |
-| 262 | `BOUGHT` | OK |
-| 290 | `COMMANDS` | OK |
-| 410 | `INVALID_CREDENTIALS` | ERR |
-| 411 | `USERNAME_EXISTS` | ERR |
-| 413 | `ALREADY_LOGGED_IN` | ERR |
-| 414 | `USER_ALREADY_ONLINE` | ERR |
-| 415 | `LOGOUT_FIRST` | ERR |
-| 417 | `USER_LIMIT` | ERR |
-| 421 | `LOGIN_REQUIRED` | ERR |
-| 422 | `ONLY_OWNER_CAN_SELL` | ERR |
-| 423 | `ONLY_OWNER_CAN_WITHDRAW` | ERR |
-| 424 | `ONLY_OWNER_CAN_START` | ERR |
-| 425 | `SELLER_CANNOT_BID` | ERR |
-| 426 | `SELLER_CANNOT_BUY` | ERR |
-| 430 | `ROOM_NOT_FOUND` | ERR |
-| 431 | `ALREADY_IN_A_ROOM` | ERR |
-| 432 | `NOT_IN_A_ROOM` | ERR |
-| 433 | `JOIN_ROOM_FIRST` | ERR |
-| 434 | `ROOM_LIMIT` | ERR |
-| 435 | `ROOM_FULL` | ERR |
-| 440 | `ITEM_NOT_FOUND` | ERR |
-| 441 | `NO_ACTIVE_ITEM` | ERR |
-| 442 | `BID_INVALID` | ERR |
-| 443 | `ITEM_LIMIT` | ERR |
-| 444 | `ONLY_QUEUED_ITEMS_CAN_BE_WITHDRAWN` | ERR |
-| 445 | `AUCTION_ALREADY_ACTIVE` | ERR |
-| 446 | `NO_QUEUED_ITEM` | ERR |
-| 450 | `UNKNOWN_COMMAND_OR_WRONG_ARGUMENTS` | ERR |
-| 451 | `BAD_CREDENTIAL_FORMAT` | ERR |
-| 452 | `INVALID_OR_TOO_LONG_LINE` | ERR |
-| 453 | `INVALID_LINE_ENDING` | ERR |
-| 455 | `INVALID_ROOM_NAME` | ERR |
-| 456 | `INVALID_ROOM_ID` | ERR |
-| 457 | `INVALID_ITEM_TEXT` | ERR |
-| 458 | `INVALID_PRICE` | ERR |
-| 459 | `INVALID_ITEM_ID` | ERR |
-| 501 | `STORAGE_FAILED` | ERR |
+| 400 | INVALID_REQUEST | Message không hợp lệ hoặc quá dài |
+| 400 | INVALID_REQUEST | Sai ký tự kết thúc dòng |
+| 400 | INVALID_REQUEST | Sai tên lệnh hoặc số tham số |
+| 401 | AUTH_ERROR | Phiên đã đăng nhập |
+| 401 | AUTH_ERROR | Phải đăng nhập trước |
+| 401 | AUTH_ERROR | Phải đăng xuất trước |
+| 401 | AUTH_ERROR | Sai tài khoản hoặc mật khẩu |
+| 401 | AUTH_ERROR | Tài khoản đang đăng nhập nơi khác |
+| 401 | AUTH_ERROR | Tài khoản đã tồn tại |
+| 403 | FORBIDDEN | Chỉ chủ phòng được bắt đầu đấu giá |
+| 403 | FORBIDDEN | Chỉ chủ phòng được rút vật phẩm |
+| 403 | FORBIDDEN | Chỉ chủ phòng được thêm vật phẩm |
+| 403 | FORBIDDEN | Người bán không được tự mua |
+| 403 | FORBIDDEN | Người bán không được tự đặt giá |
+| 404 | NOT_FOUND | Không tìm thấy phòng |
+| 404 | NOT_FOUND | Không tìm thấy vật phẩm |
+| 409 | INVALID_STATE | Chưa tham gia phòng |
+| 409 | INVALID_STATE | Không có vật phẩm chờ |
+| 409 | INVALID_STATE | Không có vật phẩm đang đấu giá |
+| 409 | INVALID_STATE | Vật phẩm không ở trạng thái chờ |
+| 409 | INVALID_STATE | Đang có vật phẩm đấu giá |
+| 409 | INVALID_STATE | Đang ở trong phòng |
+| 422 | INVALID_DATA | Giá không hợp lệ |
+| 422 | INVALID_DATA | Giá đặt không hợp lệ |
+| 422 | INVALID_DATA | ID phòng không hợp lệ |
+| 422 | INVALID_DATA | ID vật phẩm không hợp lệ |
+| 422 | INVALID_DATA | Sai định dạng tài khoản |
+| 422 | INVALID_DATA | Tên hoặc mô tả không hợp lệ |
+| 422 | INVALID_DATA | Tên phòng không hợp lệ |
+| 429 | LIMIT_REACHED | Phòng đã đầy |
+| 429 | LIMIT_REACHED | Đạt giới hạn số phòng |
+| 429 | LIMIT_REACHED | Đạt giới hạn tài khoản |
+| 429 | LIMIT_REACHED | Đạt giới hạn vật phẩm |
+| 501 | STORAGE_FAILED | Lỗi lưu trữ dữ liệu |
 
-## Examples (wire format)
-
-```text
-S -> C: 100 "Send HELP for commands"\r\n
-C -> S: LOGIN alice AlicePass123\r\n
-S -> C: 210 alice\r\n
-C -> S: CREATE_ROOM "Do dien tu"\r\n
-S -> C: 240 1 "Do dien tu"\r\n
-C -> S: ADD_ITEM Laptop "Da su dung" 100000 200000\r\n
-S -> C: 250 1\r\n
-S -> ALL: 113 1 1 Laptop\r\n
-C -> S: BID 110000\r\n
-S -> C: 261 1 110000\r\n
-S -> ALL: 120 1 1 bob 110000\r\n
-S -> ALL: 121 1 1 1/3 bob 110000\r\n```
-
-Numeric code definitions and local display names remain in `include/protocol.h`.
+19 distinct response/event codes; 15 requests. Auction business rules and database schema unchanged.
